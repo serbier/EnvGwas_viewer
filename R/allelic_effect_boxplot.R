@@ -2,12 +2,17 @@
 allelicEffectPlot_ui <- function(id){
   ns <- NS(id)
   card(
-    card_header("Allelic Effect"),
+    height="600px",
+    card_header(class = 'bg-primary bg-opacity-25 text-black',
+      textOutput(ns("card_head"))),
     card_body(
+      min_height = "400px",
       layout_column_wrap(
+        min_height = "200px",
         value_box(
           title = "PEV",
           value = textOutput(ns("pevValue")),
+          theme = "green"
         ),
         value_box(
           title = "LOD",
@@ -16,6 +21,7 @@ allelicEffectPlot_ui <- function(id){
         value_box(
           title = "Favorable Allele",
           value = textOutput(ns("faValue")),
+          theme = "blue"
         ),
         value_box(
           title = "Effect",
@@ -42,6 +48,7 @@ allelicEffectPlot_server <- function(id, qtlData, gtCol = "GT",
   maf
 ) {
   moduleServer(id, function(input, output, session){
+    output$card_head <- renderText(gtCol)
     output$pevValue <- renderText(glue::glue("{round(pev,1)}%"))
     output$lodValue <- renderText(glue::glue("{round(lod,1)}"))
     output$faValue <- renderText(glue::glue("{fa}"))
@@ -74,7 +81,7 @@ allelicEffectPlot_server <- function(id, qtlData, gtCol = "GT",
           add_trace(
             y = traces[[gt]],
             type = "box",
-            name = gt,
+            name = as.character(gt),
             boxpoints = "all", jitter = 0.3,
             pointpos = -1.8,
             text = text[[gt]]

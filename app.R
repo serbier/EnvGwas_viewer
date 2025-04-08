@@ -20,7 +20,7 @@ ui <- page_sidebar(
       choices = c("Mesoamerican", "Andean")
     )
   ),
-  uiOutput("main_area")
+  page_fluid(uiOutput("main_area"))
 )
 
 server <- function(input, output, session) {
@@ -54,38 +54,53 @@ server <- function(input, output, session) {
       summarize(count = n())
 
     gt_df <- read_gt_data()
-    tabs <- lapply(trait_group$variable, function(x) {
+    tabs <- lapply(trait_group$variable, function(trait) {
+      # Get the qtl info data for each trait
       target_qtls <- read_data() %>%
-        filter(variable == x)
-      target_gt <- read_gt_data()
-      i_data <- lapply(target_qtls$qtn_id, function(y) {
-        i_metadata <- target_qtls %>%
-          filter(qtn_id == y)
-        i_gt <- target_gt %>%
-          select(Accesion, !!sym(x), !!sym(y))
-        list(
-          pev = i_metadata$`Phenotype_Variance_Explained(%)`,
-          lod = -log10(i_metadata$`BLINK P value (Boferroni adjusted)`),
-          fa = i_metadata$Favorable.allele,
-          eff = i_metadata$effect,
-          maf = i_metadata$maf2,
-          gt = i_gt
-        )
-      })
+        filter(variable == trait)
 
+      i_boxplots <- lapply(target_qtls$qtn_id, function(y) {
+        allelicEffectPlot_ui(glue::glue("bxpl-{y}"))
+      })
       nav_panel(
-        x,
-        layout_column_wrap()
+        title = trait,
+        layout_column_wrap(
+          width = 1 / 2,
+          !!!i_boxplots
+        )
       )
     })
-
-
     navset_card_tab(
       title = "Traits",
       !!!tabs
     )
   })
+
+  observe({
+    req(read_data())
+    req(read_gt_data())
+    trait_data <- read_data()
+    gt_data <- read_gt_data()
+    lapply(trait_data$qtn_id, function(iqtn) {
+      i_metadata <- read_data() %>%
+        filter(qtn_id == iqtn)
+      i_gt <- gt_data %>%
+        select(Accesion, !!sym(i_metadata$AlleleID), !!sym(i_metadata$variable))
+
+      allelicEffectPlot_server(
+        glue::glue("bxpl-{iqtn}"),
+        i_gt,
+        i_metadata$AlleleID,
+        "Accesion",
+        i_metadata$variable,
+        i_metadata$`Phenotype_Variance_Explained(%)`,
+        -log10(i_metadata$`BLINK P value (Boferroni adjusted)`),
+        i_metadata$Favorable.allele,
+        i_metadata$effect,
+        i_metadata$maf2
+      )
+    })
+  })
 }
 
 shinyApp(ui, server)
-
