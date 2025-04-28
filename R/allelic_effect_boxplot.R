@@ -1,3 +1,10 @@
+library(readxl)
+library(dplyr)
+library(shiny)
+library(bslib)
+library(DT)
+library(plotly)
+library(magrittr)
 
 allelicEffectPlot_ui <- function(id){
   ns <- NS(id)
@@ -76,25 +83,47 @@ allelicEffectPlot_server <- function(id, qtlData, gtCol = "GT",
       fig <- plot_ly() %>% 
         layout(xaxis = list(title = gtCol), yaxis = list(title = response))
       
+      annotations <- list()
+      counter <- 1
       for (gt in names(traces)) {
+        
+        if(gt %in% c(0,1, '0', '1')){
+          if(gt == 0){
+            trace_name <- 'A'
+          } else {
+            trace_name <- 'P'
+          }
+        } else {
+          trace_name <- gt
+        }
+        
         fig <- fig %>%
           add_trace(
             y = traces[[gt]],
             type = "box",
-            name = as.character(gt),
+            name = trace_name,
             boxpoints = "all", jitter = 0.3,
             pointpos = -1.8,
             text = text[[gt]]
           )
+        
+        annotations[[counter]] <- list(
+          x = trace_name,
+          y = max(traces[[gt]]) * 1.1,
+          text = glue::glue("n = {length(traces[[gt]])}"),
+          showarrow = FALSE,
+          font = list(size = 10)
+        )
+        counter <- counter + 1
       }
-      fig
+      layout(fig, annotations = annotations)
     })
   })
 }
 
 allelicEffect_demo <- function() {
   # Marker Info sheet
-  DB = "/home/scruz/projects/EnvGwas_viewer/data/FFAR_selections_SNP.SilicoDArT_4.xlsx"
+  DB = "data/FFAR_selections_SNP.SilicoDArT_4.xlsx"
   df <- read_excel(path = DB, sheet = "Marker info") %>% 
     filter(AlleleID == "117740086-60-G/A") %>% 
     filter(variable == "Total Precipitation (mm)")

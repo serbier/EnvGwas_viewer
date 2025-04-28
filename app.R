@@ -4,6 +4,7 @@ library(shiny)
 library(bslib)
 library(DT)
 library(plotly)
+library(magrittr)
 
 ui <- page_sidebar(
   title = "EnvGWAS V1.0",
