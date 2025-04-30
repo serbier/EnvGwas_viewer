@@ -89,9 +89,9 @@ allelicEffectPlot_server <- function(id, qtlData, gtCol = "GT",
         
         if(gt %in% c(0,1, '0', '1')){
           if(gt == 0){
-            trace_name <- 'A'
+            trace_name <- 'Absence'
           } else {
-            trace_name <- 'P'
+            trace_name <- 'Presence'
           }
         } else {
           trace_name <- gt
