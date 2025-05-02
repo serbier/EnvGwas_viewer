@@ -31,7 +31,8 @@ ui <- page_sidebar(
 
 server <- function(input, output, session) {
   data_dir <- "data/"
-
+  
+  
   observe({
     files <- list.files(path = data_dir, pattern = "\\.xlsx$", full.names = FALSE)
     updateSelectInput(session, "select_dataset", choices = files)
