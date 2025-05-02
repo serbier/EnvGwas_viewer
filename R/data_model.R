@@ -1,4 +1,5 @@
 library(dplyr)
+library(readxl)
 
 get_qtl_info <- function(m_info_df, m_id,id_col = "AlleleID"){
   
@@ -34,16 +35,16 @@ get_qtl_sample_data <- function(m_gt_df, m_id){
   }
   
   fmt_gt <- m_gt_df %>% 
-    mutate(GT = ifelse(!!sym(m_id) == !!sym(paste0(m_id, "_Imp")),
-                       !!sym(m_id), paste0(!!sym(paste0(m_id,"_Imp")),"_Imp")
-                       ))
+    mutate(Imputed = ifelse(!!sym(m_id) != !!sym(paste0(m_id, "_Imp")),
+                       "Imputed", "Observed"))
   return(fmt_gt)
 }
 
-DB = "data/FFAR_selections_SNP.SilicoDArT_4_v2.xlsx"
-m_info_df <- read_excel(path = DB, sheet = "Marker.info")
-marker_id <- "SNP_118390666-47-T/C"
-m_info <- get_qtl_info(m_info_df, marker_id)
+#DB = "data/FFAR_selections_SNP.SilicoDArT_4_v2.xlsx"
+#m_info_df <- read_excel(path = DB, sheet = "Marker.info")
+#marker_id <- "SNP_118390666-47-T/C"
+#m_info <- get_qtl_info(m_info_df, marker_id)
 
-m_gt_df <- read_excel(path = DB, sheet = "Andean")
-gt_data <- get_qtl_sample_data(m_gt_df, marker_id)
+#m_gt_df <- read_excel(path = DB, sheet = "Andean")
+#gt_data <- get_qtl_sample_data(m_gt_df, marker_id)
+

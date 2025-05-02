@@ -6,12 +6,14 @@ library(DT)
 library(plotly)
 library(magrittr)
 
+source('./R/data_model.R')
+
 allelicEffectPlot_ui <- function(id){
   ns <- NS(id)
   card(
     height="600px",
     card_header(class = 'bg-primary bg-opacity-25 text-black',
-      textOutput(ns("card_head"))),
+      "QTN Metrics"),
     card_body(
       min_height = "400px",
       layout_column_wrap(
@@ -39,117 +41,84 @@ allelicEffectPlot_ui <- function(id){
           value = textOutput(ns("mafValue")),
         ),
       ),
-      plotlyOutput(ns("allelicEffectBoxplot"))
+      plotlyOutput(ns("allelicEffectBoxplot")),
     )
   )
   
 }
 
-allelicEffectPlot_server <- function(id, qtlData, gtCol = "GT",
-  designation = "Designation",
-  response = "Response",
-  pev,
-  lod,
-  fa,
-  eff,
-  maf
-) {
+allelicEffectPlot_server <- function(id, marker_info,
+                                     ind_data,
+                                     response,
+                                     GT,
+                                     designation = "Accesion") {
   moduleServer(id, function(input, output, session){
-    output$card_head <- renderText(gtCol)
-    output$pevValue <- renderText(glue::glue("{round(pev,1)}%"))
+    lod <- -log10(marker_info$p_value)
+    output$pevValue <- renderText(glue::glue("{round(marker_info$PVE,1)}%"))
     output$lodValue <- renderText(glue::glue("{round(lod,1)}"))
-    output$faValue <- renderText(glue::glue("{fa}"))
-    output$effValue <- renderText(glue::glue("{round(eff,3)}"))
-    output$mafValue <- renderText(glue::glue("{round(maf*100,2)}%"))
+    output$faValue <- renderText(glue::glue("{marker_info$Favorable.allele}"))
+    output$effValue <- renderText(glue::glue("{round(marker_info$effect,3)}"))
+    output$mafValue <- renderText(glue::glue("{round(marker_info$maf.Imputed*100,2)}%"))
 
     pre_process_data <- reactive({
-      clean <- qtlData %>% 
+      clean <- ind_data %>% 
         filter(!is.na(!!sym(response))) %>% 
         filter(!is.na(!!sym(designation)))
     })
+    
     output$allelicEffectBoxplot <- renderPlotly({
       req(pre_process_data)
       
-      Gcalls <- unlist(unique(pre_process_data()[,gtCol]))
-      names(Gcalls) <- unlist(Gcalls)
+      Gcalls <- unlist(unique(pre_process_data()[,GT]))
       
-      traces <- lapply(Gcalls, function(GC){
-        pre_process_data() %>%  filter(!!sym(gtCol) == GC) %>% pull(!!sym(response))
-      })
-      text <- lapply(Gcalls, function(GC){
-        pre_process_data() %>%  filter(!!sym(gtCol) == GC) %>% pull(!!sym(designation))
-      })
-      
-      fig <- plot_ly() %>% 
-        layout(xaxis = list(title = gtCol), yaxis = list(title = response))
-      
-      annotations <- list()
-      counter <- 1
-      for (gt in names(traces)) {
-        
-        if(gt %in% c(0,1, '0', '1')){
-          if(gt == 0){
-            trace_name <- 'Absence'
-          } else {
-            trace_name <- 'Presence'
-          }
-        } else {
-          trace_name <- gt
-        }
-        
-        fig <- fig %>%
-          add_trace(
-            y = traces[[gt]],
-            type = "box",
-            name = trace_name,
-            boxpoints = "all", jitter = 0.3,
-            pointpos = -1.8,
-            text = text[[gt]]
-          )
-        
-        annotations[[counter]] <- list(
-          x = trace_name,
-          y = max(traces[[gt]]) * 1.1,
-          text = glue::glue("n = {length(traces[[gt]])}"),
+      annotations <- lapply(seq(1, length(Gcalls)), function(GC){
+        GC <- Gcalls[GC]
+        idf <- pre_process_data() %>%  filter(!!sym(GT) == GC)
+        list(
+          x = GC,
+          y = max(idf %>% pull(!!sym(response))) * 1.1,
+          text = glue::glue("n = {dim(idf)[1]}"),
           showarrow = FALSE,
           font = list(size = 10)
         )
-        counter <- counter + 1
-      }
-      layout(fig, annotations = annotations)
+      })
+      
+      
+      data <- pre_process_data()
+      fig <- plot_ly(
+        data = data,
+        x = data[[GT]],
+        y = data[[response]],
+        color = data[['Imputed']],
+        type = 'box',
+        boxpoints = 'all',
+        source = GT,
+        key = data[[designation]]) %>% 
+          layout(xaxis = list(title = GT),
+                 yaxis = list(title = response),
+                 annotations = annotations)
+      fig
+      
+
     })
   })
 }
 
 allelicEffect_demo <- function() {
-  # Marker Info sheet
-  DB = "data/FFAR_selections_SNP.SilicoDArT_4.xlsx"
-  df <- read_excel(path = DB, sheet = "Marker info") %>% 
-    filter(AlleleID == "117740086-60-G/A") %>% 
-    filter(variable == "Total Precipitation (mm)")
-  favorable_allele <- df$Favorable.allele
-  allelic_effect <- df$effect
-  maf <- df$maf2
-  pev <- df$`Phenotype_Variance_Explained(%)`
-  LOD <- -log10(df$`BLINK P value (Boferroni adjusted)`)
-  # Genotype  & Phenotype data
-  gdf <- read_excel(path = DB, sheet = "Sheet2")
-  marker_id <- "117740086-60-G/A"
-  trait_id <- "prec"
-  designation <- "Accesion"
-  marker_name <- colnames(gdf)[grep(glue::glue("{marker_id}"), colnames(gdf))]
-  tgt <- gdf[,c(designation, marker_name, trait_id)]
-  # TODO Filter one association
+  # Load data
+  DB = "data/FFAR_selections_SNP.SilicoDArT_4_v2.xlsx"
+  m_info_df <- read_excel(path = DB, sheet = "Marker.info")
+  marker_id <- "SNP_118390666-47-T/C"
+  m_info <- get_qtl_info(m_info_df, marker_id)
+  m_gt_df <- read_excel(path = DB, sheet = "Andean")
+  gt_data <- get_qtl_sample_data(m_gt_df, marker_id)
+  
   ui <- fluidPage(allelicEffectPlot_ui("x"))
   server <- function(input, output, session) {
-    allelicEffectPlot_server("x",tgt, gtCol = "SNP_117740086-60-G/A_F_G",
+    allelicEffectPlot_server("x", m_info, gt_data,
+                             response = "climate.prec",
                              designation = "Accesion",
-                             response = "prec",
-                             pev,
-                             LOD,
-                             favorable_allele,
-                             allelic_effect,
-                             maf)
+                             GT = paste0(marker_id, "_Imp"))
   }
   shinyApp(ui, server)
 }

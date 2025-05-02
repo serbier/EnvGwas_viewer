@@ -19,6 +19,11 @@ ui <- page_sidebar(
       inputId = "select_genepool",
       label = "Select a Genepool",
       choices = c("Mesoamerican", "Andean")
+    ),
+    selectInput(
+      inputId = "select_trait",
+      label = "Select Trait",
+      choices = NULL
     )
   ),
   page_fluid(uiOutput("main_area"))
@@ -36,10 +41,16 @@ server <- function(input, output, session) {
     req(input$select_dataset)
     req(input$select_genepool)
     file <- glue::glue("{data_dir}/{input$select_dataset}")
-    df <- read_excel(path = file, sheet = "Marker info") %>%
+    read_excel(path = file, sheet = "Marker.info") %>%
       filter(Subset == input$select_genepool)
-    df
   })
+  
+  read_data_trait <- reactive({
+    req(read_data())
+    req(input$select_trait)
+    read_data() %>% filter(variable == input$select_trait)
+  })
+  
   read_gt_data <- reactive({
     req(read_data())
     req(input$select_genepool)
@@ -47,59 +58,75 @@ server <- function(input, output, session) {
     df <- read_excel(path = file, sheet = input$select_genepool)
     df
   })
+  
+  observe({
+    req(read_data())
+    req(input$select_genepool)
+    
+    marker_info <- read_data()
+    updateSelectInput(session,
+                      "select_trait",
+                      choices = marker_info$variable)
+  })
 
   output$main_area <- renderUI({
-    req(read_data())
-    trait_group <- read_data() %>%
-      group_by(variable) %>%
-      summarize(count = n())
-
+    req(read_data_trait())
+    trait_df <- read_data_trait()
     gt_df <- read_gt_data()
-    tabs <- lapply(trait_group$variable, function(trait) {
-      # Get the qtl info data for each trait
-      target_qtls <- read_data() %>%
-        filter(variable == trait)
+    
+    tabs <- lapply(trait_df$qtn_id, function(qtn_name) {
+      i_boxplots <- allelicEffectPlot_ui(glue::glue("bxpl-{qtn_name}"))
+      i_tables <- selectedIndTable_ui(glue::glue("table-{qtn_name}"))
+      i_maps <- selectedIndDist_ui(glue::glue("map-{qtn_name}"))
 
-      i_boxplots <- lapply(target_qtls$qtn_id, function(y) {
-        allelicEffectPlot_ui(glue::glue("bxpl-{y}"))
-      })
       nav_panel(
-        title = trait,
+        title = qtn_name,
         layout_column_wrap(
-          width = 1 / 2,
-          !!!i_boxplots
-        )
+          width = 1,
+          i_boxplots,
+          i_tables,
+          i_maps)
       )
     })
+    
     navset_card_tab(
-      title = "Traits",
+      title = "QTNs",
       !!!tabs
     )
   })
 
   observe({
-    req(read_data())
+    req(read_data_trait())
     req(read_gt_data())
-    trait_data <- read_data()
-    gt_data <- read_gt_data()
-    lapply(trait_data$qtn_id, function(iqtn) {
-      i_metadata <- read_data() %>%
-        filter(qtn_id == iqtn)
-      i_gt <- gt_data %>%
-        select(Accesion, !!sym(i_metadata$AlleleID), !!sym(i_metadata$variable))
-
+    
+    m_info_df <- read_data_trait()
+    m_gt_df <- read_gt_data()
+    
+    lapply(m_info_df$qtn_id, function(iqtn) {
+      
+      sdf <- m_info_df %>% filter(qtn_id == iqtn)
+      
+      m_info <- get_qtl_info(m_info_df, sdf$AlleleID)
+      gt_data <- get_qtl_sample_data(m_gt_df, sdf$AlleleID)
+      
       allelicEffectPlot_server(
-        glue::glue("bxpl-{iqtn}"),
-        i_gt,
-        i_metadata$AlleleID,
-        "Accesion",
-        i_metadata$variable,
-        i_metadata$`Phenotype_Variance_Explained(%)`,
-        -log10(i_metadata$`BLINK P value (Boferroni adjusted)`),
-        i_metadata$Favorable.allele,
-        i_metadata$effect,
-        i_metadata$maf2
+        id = glue::glue("bxpl-{iqtn}"),
+        marker_info = m_info,
+        ind_data = gt_data,
+        response = sdf$variable,
+        GT = paste0(sdf$AlleleID, "_Imp")
       )
+      
+      selectedIndTable_server(
+        id = glue::glue("table-{iqtn}"),
+        ind_data = gt_data,
+        qtn_id = paste0(sdf$AlleleID, "_Imp"))
+      
+      selectedIndDist_server(
+        id = glue::glue("map-{iqtn}"),
+        ind_data = gt_data,
+        qtn_id = paste0(sdf$AlleleID, "_Imp"))
+      
     })
   })
 }
