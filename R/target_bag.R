@@ -18,9 +18,14 @@ targetBag_ui <- function(id) {
 
 targetBag_server <- function(id, marker_info, ind_data, bag) {
   moduleServer(id, function(input, output, session) {
+    group_data <- reactive({
+      gruped_df <- bag$bag %>% 
+        group_by(Accesion) %>% 
+        mutate(concatenated = paste(reason, collapse = ", "))
+    })
     output$targetBagIndData <- renderDT(
       {
-        bag$bag
+        group_data()
       },
       options = list(pageLength = 10)
     )
