@@ -16,15 +16,29 @@ selectedIndDist_ui <- function(id) {
   )
 }
 
-selectedIndDist_server <- function(id, ind_data, qtn_id, designation = "Accesion") {
+selectedIndDist_server <- function(id, ind_data, qtn_id = NULL, designation = "Accesion",
+                                   interactive = TRUE) {
   moduleServer(id, function(input, output, session) {
     output$inds_distribution <- renderLeaflet({
-      selected <- event_data("plotly_selected", source = qtn_id)
-      if (is.null(selected)) {
-        return(NULL)
+      
+      if (interactive) {
+        selected <- event_data("plotly_selected", source = qtn_id)
+        if (is.null(selected)) {
+          return(NULL)
+        }
+        selected_inds <- ind_data %>% filter(!!sym(designation) %in% selected$key)
+      } else {
+        selected_inds <- ind_data %>%
+            group_by(Accesion) %>% 
+            mutate(concatenated = paste(reason, collapse = ", ")) %>% 
+            slice_head(n = 1)
+        
+        if (is.null(selected_inds)) {
+          return(NULL)
+        }
+        
       }
 
-      selected_inds <- ind_data %>% filter(!!sym(designation) %in% selected$key)
 
       leaflet(data = selected_inds) %>%
         addMarkers(

@@ -96,16 +96,20 @@ server <- function(input, output, session) {
       i_tables <- selectedIndTable_ui(glue::glue("table-{qtn_name}"))
       i_maps <- selectedIndDist_ui(glue::glue("map-{qtn_name}"))
 
-      nav_panel(
-        title = qtn_name,
-        layout_column_wrap(
-          width = 1,
-          i_boxplots,
-          i_tables,
-          i_maps
-        )
-      )
+    nav_panel(
+      title = qtn_name,
+      layout_column_wrap(
+        width = 1,
+        i_boxplots,
+        i_tables,
+        i_maps))
     })
+    
+    bag_cards <- list(
+      targetBag_ui("target_bag_table"),
+      selectedIndDist_ui("target_bag_map")
+    )
+    
     navset_card_tab(
       nav_panel(
         title = "QTNs",
@@ -115,7 +119,9 @@ server <- function(input, output, session) {
       ),
       nav_panel(
         title = "Target Bag",
-        targetBag_ui("target_bag")
+        navset_card_tab(
+          !!!bag_cards
+        )
       )
     )
   })
@@ -143,6 +149,7 @@ server <- function(input, output, session) {
 
       selectedIndTable_server(
         id = glue::glue("table-{iqtn}"),
+        marker_info = m_info,
         ind_data = gt_data,
         qtn_id = paste0(sdf$AlleleID, "_Imp"),
         bag = target_bag_data
@@ -155,14 +162,21 @@ server <- function(input, output, session) {
       )
     })
   })
-
+  
+  observe({
+    req(target_bag_data$bag)
+    selectedIndDist_server(id = "target_bag_map",
+                           ind_data = target_bag_data$bag,
+                           interactive = FALSE)
+  })
+  
   observe({
     req(read_data_trait())
     req(read_gt_data())
 
     m_info_df <- read_data_trait()
     m_gt_df <- read_gt_data()
-    targetBag_server("target_bag",
+    targetBag_server("target_bag_table",
       marker_info = m_info_df,
       ind_data = m_gt_df,
       bag = target_bag_data
