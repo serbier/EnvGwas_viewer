@@ -86,6 +86,7 @@ allelicEffectPlot_server <- function(id, marker_info,
       data <- pre_process_data()
       fig <- plot_ly(
         data = data,
+
         x = data[[GT]],
         y = data[[response]],
         color = data[["Imputed"]],

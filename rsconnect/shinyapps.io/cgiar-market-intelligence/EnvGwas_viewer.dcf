@@ -5,7 +5,7 @@ account: cgiar-market-intelligence
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 14465652
-bundleId: 10252308
+bundleId: 10252503
 url: https://cgiar-market-intelligence.shinyapps.io/EnvGwas_viewer/
 version: 1
 asMultiple: FALSE
