@@ -11,7 +11,9 @@ targetBag_ui <- function(id) {
       "Selected Genotypes Detail"
     ),
     card_body(
-      DTOutput(ns("targetBagIndData"))
+      fluidRow(DTOutput(ns("targetBagIndData")),
+               downloadButton(ns("download_bag"))
+               )
     )
   )
 }
@@ -34,20 +36,21 @@ targetBag_server <- function(id, marker_info, ind_data, bag) {
         slice_head(n = 1)
       
     })
-    output$targetBagIndData <- renderDT(
+    output$targetBagIndData <- renderDataTable(
       {
-        datatable(
-          group_data(),
-          extensions = "Buttons",
-          options = list(
-            dom = "Bfrtip",
-            buttones = c('copy', 'excel')
-          )
-        )
-        
+        datatable(group_data())
       },
-      server = FALSE,
-      options = list(pageLength = 10)
+      options = list(pageLength = 10),
+      server = FALSE
     )
+    output$download_bag <- downloadHandler(
+      filename = function() {
+        paste0("selection_bag.csv")
+      },
+      content = function(file) {
+        write.csv(group_data(), file)
+      }
+    )
+    
   })
 }

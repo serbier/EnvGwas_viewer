@@ -38,17 +38,14 @@ selectedIndTable_server <- function(id, marker_info, ind_data, qtn_id, bag, desi
           newbag <- bag$bag %>% filter(reason != marker_info$qtn_id)
           bag$bag <- rbind(newbag, selected_inds)
         } else {
-          print("flag")
-          print(bag$bag)
           bag$bag <- selected_inds
         }
-
-
-        output$selectedIndData <- renderDT(
+        output$selectedIndData <- renderDataTable(
           {
-            selected_inds
+            datatable(selected_inds)
           },
-          options = list(pageLength = 10)
+          options = list(pageLength = 10),
+          server = FALSE
         )
       },
       ignoreNULL = TRUE
