@@ -11,34 +11,37 @@ targetBag_ui <- function(id) {
       "Selected Genotypes Detail"
     ),
     card_body(
-      fluidRow(DTOutput(ns("targetBagIndData")),
-               downloadButton(ns("download_bag"))
-               )
+      fluidRow(
+        inputPanel(
+          selectInput(ns("selectBagCols"),
+            label = "Select Columns to display",
+            choices = c(),
+            multiple = TRUE
+          )
+        ),
+        DTOutput(ns("targetBagIndData")),
+        downloadButton(ns("download_bag"))
+      )
     )
   )
 }
 
 targetBag_server <- function(id, marker_info, ind_data, bag) {
   moduleServer(id, function(input, output, session) {
-    
+    observeEvent(bag$bag, {
+      updateSelectInput(session, "selectBagCols", choices = colnames(bag$bag))
+    })
+
+
     group_data <- reactive({
       gruped_df <- bag$bag %>%
-        select(Accesion, country, characterization.seed.color,
-               characterization.seed.shine, characterization.seed.shape,
-               characterization.seed.100.weight,
-               characterization.growth.habit, characterization.phaseolin,
-               characterization.days.flowering, characterization.BCMV_EN,
-               characterization.EMPOASCA_EN,
-               climate.latitude, climate.longitude,
-               favorable.counts.SNP_Imp, favorable.counts.SILICO_Imp, reason) %>% 
-        group_by(Accesion) %>% 
-        mutate(concatenated = paste(reason, collapse = ", ")) %>% 
+        group_by(Accesion) %>%
+        mutate(concatenated = paste(reason, collapse = ", ")) %>%
         slice_head(n = 1)
-      
     })
     output$targetBagIndData <- renderDataTable(
       {
-        datatable(group_data())
+        datatable(group_data() %>% select(input$selectBagCols))
       },
       options = list(pageLength = 10),
       server = FALSE
@@ -51,6 +54,5 @@ targetBag_server <- function(id, marker_info, ind_data, bag) {
         write.csv(group_data(), file)
       }
     )
-    
   })
 }

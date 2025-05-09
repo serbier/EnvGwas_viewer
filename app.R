@@ -74,7 +74,6 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$select_genepool, {
-    print("Erase bag")
     data <- read_data()
     for (plot_id in data$AlleleID) {
       plotlyProxy(glue::glue("{plot_id}_Imp"), session) %>%
@@ -96,20 +95,22 @@ server <- function(input, output, session) {
       i_tables <- selectedIndTable_ui(glue::glue("table-{qtn_name}"))
       i_maps <- selectedIndDist_ui(glue::glue("map-{qtn_name}"))
 
-    nav_panel(
-      title = qtn_name,
-      layout_column_wrap(
-        width = 1,
-        i_boxplots,
-        i_tables,
-        i_maps))
+      nav_panel(
+        title = qtn_name,
+        layout_column_wrap(
+          width = 1,
+          i_boxplots,
+          i_tables,
+          i_maps
+        )
+      )
     })
-    
+
     bag_cards <- list(
       targetBag_ui("target_bag_table"),
       selectedIndDist_ui("target_bag_map")
     )
-    
+
     navset_card_tab(
       nav_panel(
         title = "QTNs",
@@ -162,14 +163,16 @@ server <- function(input, output, session) {
       )
     })
   })
-  
+
   observe({
     req(target_bag_data$bag)
-    selectedIndDist_server(id = "target_bag_map",
-                           ind_data = target_bag_data$bag,
-                           interactive = FALSE)
+    selectedIndDist_server(
+      id = "target_bag_map",
+      ind_data = target_bag_data$bag,
+      interactive = FALSE
+    )
   })
-  
+
   observe({
     req(read_data_trait())
     req(read_gt_data())

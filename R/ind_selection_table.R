@@ -11,7 +11,7 @@ selectedIndTable_ui <- function(id) {
       "Genotype Detail"
     ),
     card_body(
-      DTOutput(ns("selectedIndData"))
+      uiOutput(ns("selectedIndDataUI"))
     )
   )
 }
@@ -19,7 +19,7 @@ selectedIndTable_ui <- function(id) {
 selectedIndTable_server <- function(id, marker_info, ind_data, qtn_id, bag, designation = "Accesion") {
   moduleServer(id, function(input, output, session) {
     selected_inds <- reactiveVal(NULL)
-    
+
     get_data <- reactive({
       selected <- event_data("plotly_selected", source = qtn_id)
       selected_inds_df <- ind_data %>%
@@ -27,24 +27,41 @@ selectedIndTable_server <- function(id, marker_info, ind_data, qtn_id, bag, desi
         mutate(reason = marker_info$qtn_id)
       selected_inds_df
     })
-    output$selectedIndData <- renderDataTable({
-        req(get_data())
+
+    output$selectedIndDataUI <- renderUI({
+      selected <- get_data()
+      if (dim(selected)[1] > 0) {
         selected_inds(get_data())
-        datatable(selected_inds())
+        renderDataTable(
+          {
+            selected
+          },
+          options = list(pageLength = 10),
+          server = FALSE
+        )
+      } else {
+        tagList(h3("Please select genotypes from Boxplots"))
+      }
+    })
+
+    output$selectedIndTab <- renderDataTable(
+      {
+        selected_inds(get_data())
       },
       options = list(pageLength = 10),
       server = FALSE
     )
-
-      ##event_data("plotly_selected", source = qtn_id),
-    observeEvent(selected_inds(),{
-      if (dim(bag$bag)[2] > 0) {
-        newbag <- bag$bag %>% filter(reason != marker_info$qtn_id)
-        bag$bag <- rbind(newbag, selected_inds())
-      } else {
-        bag$bag <- selected_inds()
-      }
-    }, ignoreInit = TRUE)
+    ## event_data("plotly_selected", source = qtn_id),
+    observeEvent(selected_inds(),
+      {
+        if (dim(bag$bag)[2] > 0) {
+          newbag <- bag$bag %>% filter(reason != marker_info$qtn_id)
+          bag$bag <- rbind(newbag, selected_inds())
+        } else {
+          bag$bag <- selected_inds()
+        }
+      },
+      ignoreInit = TRUE
+    )
   })
 }
-
