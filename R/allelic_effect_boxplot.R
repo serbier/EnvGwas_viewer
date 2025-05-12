@@ -42,6 +42,7 @@ allelicEffectPlot_ui <- function(id) {
           title = "MAF",
           value = textOutput(ns("mafValue")),
         ),
+        uiOutput(ns('Freq150Box'))
       ),
       plotlyOutput(ns("allelicEffectBoxplot")),
     )
@@ -65,6 +66,18 @@ allelicEffectPlot_server <- function(id, marker_info,
       clean <- ind_data %>%
         filter(!is.na(!!sym(response))) %>%
         filter(!is.na(!!sym(designation)))
+    })
+    
+    output$Freq150Box <- renderUI({
+      if(!is.na(marker_info$Freq_Panel150)){
+        value_box(
+          title = "Panel 150 Freq",
+          value = glue::glue("{round(marker_info$Freq_Panel150*100,2)}%"),
+          theme = "yellow"
+        )
+      } else {
+        return(NULL)
+      }
     })
 
     output$allelicEffectBoxplot <- renderPlotly({

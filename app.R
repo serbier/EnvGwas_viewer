@@ -33,7 +33,8 @@ server <- function(input, output, session) {
   data_dir <- "data/"
 
   target_bag_data <- reactiveValues(
-    bag = data.frame()
+    bag = data.frame(),
+    target_markers = c()
   )
   observe({
     files <- list.files(path = data_dir, pattern = "\\.xlsx$", full.names = FALSE)
@@ -111,6 +112,10 @@ server <- function(input, output, session) {
       selectedIndDist_ui("target_bag_map")
     )
 
+    subset_cards <- list(
+      selectionBag_ui("selection_bag_table")
+    )
+    
     navset_card_tab(
       nav_panel(
         title = "QTNs",
@@ -122,6 +127,12 @@ server <- function(input, output, session) {
         title = "Target Bag",
         navset_card_tab(
           !!!bag_cards
+        )
+      ),
+      nav_panel(
+        title = "Select Subset",
+        navset_card_tab(
+          !!!subset_cards
         )
       )
     )
@@ -170,6 +181,15 @@ server <- function(input, output, session) {
       id = "target_bag_map",
       ind_data = target_bag_data$bag,
       interactive = FALSE
+    )
+  })
+  
+  observe({
+    req(target_bag_data$bag)
+    selectionBag_server(
+      id = "selection_bag_table",
+      bag = target_bag_data,
+      marker_info = read_data()
     )
   })
 

@@ -37,10 +37,12 @@ targetBag_server <- function(id, marker_info, ind_data, bag) {
       gruped_df <- bag$bag %>%
         group_by(Accesion) %>%
         mutate(concatenated = paste(reason, collapse = ", ")) %>%
-        slice_head(n = 1)
+        slice_head(n = 1) %>% 
+        ungroup()
     })
     output$targetBagIndData <- renderDataTable(
       {
+        req(input$selectBagCols)
         datatable(group_data() %>% select(input$selectBagCols))
       },
       options = list(pageLength = 10),

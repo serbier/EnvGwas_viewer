@@ -57,8 +57,11 @@ selectedIndTable_server <- function(id, marker_info, ind_data, qtn_id, bag, desi
         if (dim(bag$bag)[2] > 0) {
           newbag <- bag$bag %>% filter(reason != marker_info$qtn_id)
           bag$bag <- rbind(newbag, selected_inds())
+          bag$target_markers <- c(marker_info$AlleleID,bag$target_markers)
+          
         } else {
           bag$bag <- selected_inds()
+          bag$target_markers <- c(marker_info$AlleleID)
         }
       },
       ignoreInit = TRUE
